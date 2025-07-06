@@ -1,0 +1,3016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10,000 Clickable Objects in 3D Torus</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            display: block;
+        }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        #stats {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            z-index: 100;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: right;
+            display: none;
+        }
+        
+        #title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            z-index: 100;
+            text-align: left;
+            font-family: Arial, sans-serif;
+        }
+        
+        #title h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            color: #4a90e2;
+        }
+        
+        #title p {
+            margin: 5px 0 0 0;
+            font-size: 0.9em;
+            color: #ccc;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        #ringInfo {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            width: 320px;
+            height: 500px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #4a90e2;
+            border-radius: 10px;
+            color: white;
+            padding: 20px;
+            z-index: 100;
+            display: none;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        #ringInfo h3 {
+            margin: 0 0 15px 0;
+            color: #4a90e2;
+            text-align: center;
+        }
+        
+        #ringInfo .ring-data {
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        #boxGrid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 2px;
+            margin-top: 15px;
+        }
+        
+        .mini-box {
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            border-radius: 2px;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.1s ease;
+        }
+        
+        .mini-box.clicked {
+            background: #ff6b6b;
+        }
+        
+        .mini-box.animate {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            background: rgba(0, 150, 255, 0.8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(0, 150, 255, 1);
+        }
+        
+        .control-btn.active {
+            background: rgba(255, 107, 107, 0.8);
+        }
+        
+        #ringNavigation {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        /* Trading System Styles */
+        #tradingPanel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 350px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #4a90e2;
+            border-radius: 10px;
+            color: white;
+            padding: 20px;
+            z-index: 100;
+        }
+        
+        #tradingPanel h3 {
+            margin: 0 0 15px 0;
+            color: #4a90e2;
+            text-align: center;
+        }
+        
+        .price-input-section {
+            margin-bottom: 20px;
+        }
+        
+        #priceField {
+            width: 70%;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: #333;
+            color: white;
+            font-size: 16px;
+        }
+        
+        #submitPriceBtn {
+            width: 25%;
+            padding: 8px;
+            background: #00ff88;
+            color: black;
+            border: none;
+            border-radius: 5px;
+            margin-left: 5%;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #submitPriceBtn:hover {
+            background: #00cc6a;
+        }
+        
+        #submitPriceBtn:disabled {
+            background: #666;
+            color: #999;
+            cursor: not-allowed;
+        }
+        
+        .price-chart {
+            height: 150px;
+            background: #222;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chart-line {
+            position: absolute;
+            bottom: 0;
+            width: 2px;
+            background: #00ff88;
+            transition: all 0.3s ease;
+        }
+        
+        .trading-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9em;
+        }
+        
+        .stat-item {
+            background: #333;
+            padding: 8px;
+            border-radius: 3px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #4a90e2;
+        }
+        
+        .trading-controls button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .pause-trading {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .resume-trading {
+            background: #00ff88;
+            color: black;
+        }
+        
+        /* Enhanced Admin Panel Styles */
+        .trading-profile-controls {
+            margin-top: 15px;
+            padding: 10px;
+            background: #444;
+            border-radius: 5px;
+        }
+        
+        .profile-slider {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .profile-slider label {
+            font-size: 0.8em;
+            min-width: 80px;
+        }
+        
+        .profile-slider input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .profile-slider .value-display {
+            min-width: 35px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+        
+        /* Tab System Styles */
+        .tab-navigation {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            background: #444;
+        }
+        
+        .tab-btn.active {
+            background: #4a90e2;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Leaderboard Styles */
+        .leaderboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .leaderboard-header h4 {
+            margin: 0;
+            color: #4a90e2;
+        }
+        
+        .refresh-btn {
+            background: #00ff88;
+            color: black;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .refresh-btn:hover {
+            background: #00cc6a;
+        }
+        
+        .leaderboard-table {
+            background: #222;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .leaderboard-header-row {
+            display: grid;
+            grid-template-columns: 40px 1fr 80px 100px;
+            gap: 10px;
+            background: #333;
+            padding: 12px;
+            font-weight: bold;
+            color: #4a90e2;
+            border-bottom: 2px solid #444;
+        }
+        
+        .leaderboard-entry {
+            display: grid;
+            grid-template-columns: 40px 1fr 80px 100px;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #333;
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .leaderboard-entry:hover {
+            background: #333;
+        }
+        
+        .leaderboard-entry.top-3 {
+            background: rgba(255, 215, 0, 0.1);
+        }
+        
+        .leaderboard-entry.profitable {
+            border-left: 4px solid #00ff88;
+        }
+        
+        .leaderboard-entry.losing {
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .rank-col {
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .name-col {
+            font-family: monospace;
+            color: #4a90e2;
+        }
+        
+        .trades-col {
+            text-align: center;
+            color: #ccc;
+        }
+        
+        .pnl-col {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .pnl-positive {
+            color: #00ff88;
+        }
+        
+        .pnl-negative {
+            color: #ff6b6b;
+        }
+        
+        .pnl-neutral {
+            color: #ccc;
+        }
+        
+        .leaderboard-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9em;
+        }
+        
+        .medal {
+            font-size: 16px;
+            margin-right: 5px;
+        }
+        
+        .ring-nav-btn {
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            transition: background 0.3s;
+        }
+        
+        .ring-nav-btn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+        
+        .ring-nav-btn.down {
+            clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+        }
+        
+        /* Admin Panel Styles */
+        #loginPanel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .login-form {
+            background: #333;
+            padding: 30px;
+            border-radius: 10px;
+            color: white;
+            min-width: 300px;
+        }
+        
+        .login-form h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #555;
+            color: white;
+        }
+        
+        .login-form button {
+            width: 100%;
+            padding: 10px;
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #adminPanel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .admin-header {
+            background: #333;
+            padding: 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+        }
+        
+        .admin-content {
+            padding: 20px;
+            color: white;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: calc(100vh - 80px);
+        }
+        
+        .ring-selector {
+            background: #333;
+            padding: 20px;
+            border-radius: 5px;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+        
+        .ring-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #555;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .ring-item:hover, .ring-item.active {
+            background: #4a90e2;
+        }
+        
+        .box-grid {
+            background: #333;
+            padding: 20px;
+            border-radius: 5px;
+            max-height: 100%;
+            overflow-y: auto;
+        }
+        
+        .box-grid h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        
+        .boxes-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .box-item {
+            background: #555;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid transparent;
+        }
+        
+        .box-item.clicked {
+            border-color: #ff6b6b;
+        }
+        
+        .box-item.highlighted {
+            border-color: #00ff88;
+        }
+        
+        .box-item h4 {
+            margin: 0 0 10px 0;
+            color: #4a90e2;
+        }
+        
+        .box-item input, .box-item textarea {
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 3px;
+            background: #666;
+            color: white;
+        }
+        
+        .box-item textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        
+        .admin-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .admin-btn:hover {
+            background: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">
+        <h1>Eye of the Market</h1>
+        <p>Merit-Based Trading System - Gradient Charts, Enhanced Ring Analytics, Clean Fixed View - Portfolio by Refik Baris Ozcelik</p>
+    </div>
+    
+    <div id="ringInfo">
+        <h3 id="ringInfoTitle">Ring Trading Analytics</h3>
+        <div class="ring-data">
+            <strong>Ring ID:</strong> <span id="currentRingId">--</span>
+        </div>
+        <div class="ring-data">
+            <strong>Total Boxes:</strong> <span id="totalBoxes">100</span>
+        </div>
+        <div class="ring-data">
+            <strong>Clicked Boxes:</strong> <span id="clickedInRing">0</span>
+        </div>
+        <div class="ring-data">
+            <strong>Box Range:</strong> <span id="boxRange">--</span>
+        </div>
+        <div id="boxGrid"></div>
+        <!-- Enhanced trading data will be added dynamically -->
+    </div>
+    
+    <div id="info">
+        <div>📈 ENHANCED: Gradient charts, real ring analytics, clean fixed view</div>
+        <div>Mouse: Rotate | Wheel: Zoom | Click: Highlight</div>
+        <div>Ctrl+T: Price Input | Ctrl+L: Leaderboard | Ctrl+D: Analysis</div>
+        <div>Fixed View: Shows detailed ring trading statistics & P&L data</div>
+        <div>Objects: <span id="objectCount">10,000</span> merit-competing traders</div>
+    </div>
+    
+    <div id="stats">
+        <div>Clicked: <span id="clickedCount">0</span></div>
+        <div>FPS: <span id="fps">60</span></div>
+        <div>Camera: <span id="cameraPos">X: 0, Y: 0, Z: 25</span></div>
+    </div>
+    
+    <div id="controls">
+        <button id="fixedViewBtn" class="control-btn">Fixed View (Hide Panels)</button>
+    </div>
+    
+    <div id="ringNavigation">
+        <button id="ringUpBtn" class="ring-nav-btn">▲</button>
+        <button id="ringDownBtn" class="ring-nav-btn down">▼</button>
+    </div>
+    
+    <!-- Trading Panel -->
+    <div id="tradingPanel">
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('trading')">Trading</button>
+            <button class="tab-btn" onclick="switchTab('leaderboard')">Leaderboard</button>
+        </div>
+        
+        <!-- Trading Tab -->
+        <div id="tradingTab" class="tab-content active">
+            <div class="price-input-section">
+                <div style="margin-bottom: 10px;">
+                    <label>Current Price: $<span id="currentPrice">100.00</span></label>
+                </div>
+                <div style="display: flex;">
+                    <input type="number" id="priceField" placeholder="Enter new price" step="0.01" min="0.01">
+                    <button id="submitPriceBtn" onclick="submitPrice()">Update</button>
+                </div>
+            </div>
+            
+            <div class="price-chart" id="priceChart">
+                <!-- Chart lines will be generated here -->
+            </div>
+            
+            <div class="trading-stats">
+                <div class="stat-item">
+                    <div>Active Traders</div>
+                    <div class="stat-value" id="activeTraders">10000</div>
+                </div>
+                <div class="stat-item">
+                    <div>Last Update</div>
+                    <div class="stat-value" id="lastUpdate">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Buying</div>
+                    <div class="stat-value" id="buyingCount">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Selling</div>
+                    <div class="stat-value" id="sellingCount">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Holding</div>
+                    <div class="stat-value" id="holdingCount">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Processing</div>
+                    <div class="stat-value" id="processingStatus">Ready</div>
+                </div>
+            </div>
+            
+            <div class="trading-controls">
+                <button id="pauseTrading" class="pause-trading" onclick="pauseTrading()" style="display: none;">Pause Trading</button>
+                <button id="resumeTrading" class="resume-trading" onclick="resumeTrading()" style="display: none;">Resume Trading</button>
+                <button class="control-btn" onclick="resetAllBalances()">Reset All Balances</button>
+            </div>
+        </div>
+        
+        <!-- Leaderboard Tab -->
+        <div id="leaderboardTab" class="tab-content">
+            <div class="leaderboard-header">
+                <h4>Top 15 Performers (Session)</h4>
+                <button class="refresh-btn" onclick="refreshLeaderboard()">🔄</button>
+            </div>
+            
+            <div class="leaderboard-table">
+                <div class="leaderboard-header-row">
+                    <div class="rank-col">#</div>
+                    <div class="name-col">Trader</div>
+                    <div class="trades-col">Trades</div>
+                    <div class="pnl-col">P&L</div>
+                </div>
+                <div id="leaderboardContent">
+                    <!-- Leaderboard entries will be generated here -->
+                </div>
+            </div>
+            
+            <div class="leaderboard-stats">
+                <div class="stat-item">
+                    <div>Best Performer</div>
+                    <div class="stat-value" id="bestPerformer">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Worst Performer</div>
+                    <div class="stat-value" id="worstPerformer">--</div>
+                </div>
+                <div class="stat-item">
+                    <div>Total Trades</div>
+                    <div class="stat-value" id="totalTrades">0</div>
+                </div>
+                <div class="stat-item">
+                    <div>Avg P&L</div>
+                    <div class="stat-value" id="avgPnL">$0.00</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 10px; background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; border-radius: 3px; font-size: 0.85em; color: #ffc107;">
+                📈 <strong>ENHANCED v2.0:</strong> Gradient price charts with color-coded trends! Fixed view shows comprehensive ring analytics with real P&L data, trading stats, and performance metrics.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Login Panel -->
+    <div id="loginPanel">
+        <div class="login-form">
+            <h2>Admin Login</h2>
+            <input type="text" id="username" placeholder="Username" />
+            <input type="password" id="password" placeholder="Password" />
+            <button onclick="login()">Login</button>
+            <div id="loginError" style="color: red; margin-top: 10px; display: none;">Invalid credentials</div>
+        </div>
+    </div>
+    
+    <!-- Admin Panel -->
+    <div id="adminPanel">
+        <div class="admin-header">
+            <h2>Admin Panel - Torus Box Management</h2>
+            <div>
+                <button class="admin-btn" onclick="exportData()">Export Data</button>
+                <button class="admin-btn" onclick="importData()">Import Data</button>
+                <button class="admin-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        <div class="admin-content">
+            <div class="ring-selector">
+                <h3>Rings (0-99)</h3>
+                <div id="ringList"></div>
+            </div>
+            <div class="box-grid">
+                <h3 id="ringTitle">Select a Ring</h3>
+                <div id="boxContainer" class="boxes-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        document.body.appendChild(renderer.domElement);
+
+        // Orbit controls (manual implementation)
+        let isMouseDown = false;
+        let mouseX = 0, mouseY = 0;
+        let targetRotationX = 0, targetRotationY = 0;
+        let rotationX = 0, rotationY = 0;
+        let zoom = 25;
+        
+        // Animation and view control
+        let fixedViewMode = false;
+        
+        // Ring navigation
+        const totalRings = 100;
+        let torusRotationOffset = 0;
+        let rotationSteps = 0; // Track how many steps we've rotated
+        
+        // Admin system
+        let isAdminLoggedIn = false;
+        let currentSelectedRing = -1;
+        let boxData = {}; // Store box information - will be initialized
+        
+        // Initialize box data structure
+        function initializeBoxData() {
+            // Define category distribution (40% Aggressive, 60% split among others)
+            const categories = [
+                { name: 'Aggressive', percentage: 0.40 },
+                { name: 'Momentum', percentage: 0.20 },
+                { name: 'Contrarian', percentage: 0.20 },
+                { name: 'General', percentage: 0.20 }
+            ];
+            
+            // Create array of categories based on percentages
+            const categoryPool = [];
+            for (let category of categories) {
+                const count = Math.floor(10000 * category.percentage);
+                for (let i = 0; i < count; i++) {
+                    categoryPool.push(category.name);
+                }
+            }
+            
+            // Shuffle the category pool for random distribution
+            for (let i = categoryPool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [categoryPool[i], categoryPool[j]] = [categoryPool[j], categoryPool[i]];
+            }
+            
+            let categoryIndex = 0;
+            
+            for (let ring = 0; ring < totalRings; ring++) {
+                for (let box = 0; box < 100; box++) {
+                    const boxId = `${ring}.${box}`;
+                    const uniqueSeed = ring * 100 + box; // Unique seed for each box
+                    
+                    // Assign category from shuffled pool
+                    const assignedCategory = categoryPool[categoryIndex] || 'General';
+                    categoryIndex++;
+                    
+                    // Adjust trading profile based on category
+                    let aggressiveness = Math.random();
+                    let riskTolerance = Math.random();
+                    let momentum = Math.random();
+                    
+                    switch(assignedCategory) {
+                        case 'Aggressive':
+                            aggressiveness = 0.7 + (Math.random() * 0.3); // 70-100%
+                            riskTolerance = 0.6 + (Math.random() * 0.4); // 60-100%
+                            break;
+                        case 'Momentum':
+                            momentum = 0.7 + (Math.random() * 0.3); // 70-100%
+                            break;
+                        case 'Contrarian':
+                            momentum = 0.0 + (Math.random() * 0.3); // 0-30%
+                            break;
+                        // General keeps random values
+                    }
+                    
+                    boxData[boxId] = {
+                        id: boxId,
+                        title: `Box ${boxId}`,
+                        description: '',
+                        category: assignedCategory,
+                        status: 'Active',
+                        isClicked: false,
+                        isHighlighted: false,
+                        
+                        // Trading-specific data - FAIR RANDOMNESS (no predetermined seed bias)
+                        tradingProfile: {
+                            aggressiveness: aggressiveness,
+                            riskTolerance: riskTolerance,
+                            momentum: momentum
+                            // REMOVED: seed property that created permanent winners/losers
+                        },
+                        
+                        // Trading state
+                        accountBalance: 1000.00,
+                        initialBalance: 1000.00,
+                        currentPosition: 0,
+                        lastAction: 'HOLD',
+                        totalTrades: 0,
+                        profitLoss: 0.00,
+                        lastTradeTime: 0
+                    };
+                }
+            }
+            
+            // SILENT INITIALIZATION - No console spam
+            // Category distribution tracking (silent)
+            const categoryCount = {};
+            for (let boxId in boxData) {
+                const category = boxData[boxId].category;
+                categoryCount[category] = (categoryCount[category] || 0) + 1;
+            }
+            // Distribution verified internally without console output
+        }
+        
+        // COMPLETELY REWRITTEN Trading System Classes and Functions
+        
+        // REMOVED: SeededRandom class that created permanent winners/losers
+        // NOW: Fair randomness with personality influence but no predetermined outcomes
+        
+        // ADAPTIVE TRADING SYSTEM: Traders evolve based on market conditions
+        class AdaptiveBoxTrader {
+            constructor(boxId, profile) {
+                this.boxId = boxId;
+                this.baseProfile = profile; // Original personality
+                this.currentStrategy = this.determineInitialStrategy();
+                this.adaptationHistory = [];
+                this.lastAdaptation = 0;
+            }
+            
+            determineInitialStrategy() {
+                // Start with base category but allow evolution
+                return {
+                    primary: boxData[this.boxId].category,
+                    confidence: 0.7, // How committed to current strategy
+                    riskLevel: this.baseProfile.riskTolerance,
+                    lastPerformance: 0
+                };
+            }
+            
+            makeDecision(currentPrice, priceHistory) {
+                const data = boxData[this.boxId];
+                if (data.status !== 'Active') return 'HOLD';
+                
+                // ADAPTIVE INTELLIGENCE: Evolve strategy based on market conditions
+                this.adaptToMarketRegime(currentPrice, priceHistory);
+                this.adaptToPersonalPerformance(data);
+                
+                // Generate fair random values
+                const random1 = Math.random();
+                const random2 = Math.random();
+                
+                // DYNAMIC DECISION MAKING: Strategy changes based on conditions
+                const decision = this.makeAdaptiveDecision(random1, random2, currentPrice, priceHistory, data);
+                
+                // Learn from decision outcomes
+                this.recordDecision(decision, data);
+                
+                return decision;
+            }
+            
+            // MARKET REGIME ADAPTATION: Change strategy based on market conditions
+            adaptToMarketRegime(price, history) {
+                if (history.length < 5) return; // Need history to analyze
+                
+                const recentHistory = history.slice(-5);
+                const volatility = this.calculateVolatility(recentHistory);
+                const trend = this.calculateTrend(recentHistory);
+                
+                // REGIME DETECTION
+                let optimalStrategy = 'General';
+                
+                if (volatility > 0.15) {
+                    // HIGH VOLATILITY: Contrarian strategies often work better
+                    optimalStrategy = 'Contrarian';
+                } else if (Math.abs(trend) > 0.1) {
+                    // STRONG TREND: Momentum strategies excel
+                    optimalStrategy = 'Momentum';
+                } else if (volatility < 0.05) {
+                    // LOW VOLATILITY: Conservative approach
+                    optimalStrategy = 'Conservative';
+                } else {
+                    // UNCERTAIN MARKET: Aggressive strategies for opportunities
+                    optimalStrategy = 'Aggressive';
+                }
+                
+                // GRADUAL ADAPTATION: Don't switch instantly
+                if (optimalStrategy !== this.currentStrategy.primary) {
+                    this.currentStrategy.confidence *= 0.9; // Reduce confidence in current strategy
+                    
+                    if (this.currentStrategy.confidence < 0.3) {
+                        // Switch strategies when confidence is low
+                        this.currentStrategy.primary = optimalStrategy;
+                        this.currentStrategy.confidence = 0.6;
+                        this.adaptationHistory.push({
+                            time: Date.now(),
+                            from: this.currentStrategy.primary,
+                            to: optimalStrategy,
+                            reason: 'market_regime'
+                        });
+                    }
+                }
+            }
+            
+            // PERFORMANCE-BASED ADAPTATION: Learn from wins/losses
+            adaptToPersonalPerformance(data) {
+                const currentPerformance = data.profitLoss / data.initialBalance;
+                const performanceChange = currentPerformance - this.currentStrategy.lastPerformance;
+                
+                // LEARNING MECHANISM
+                if (performanceChange > 0.05) {
+                    // Strategy is working well - increase confidence
+                    this.currentStrategy.confidence = Math.min(1.0, this.currentStrategy.confidence + 0.1);
+                } else if (performanceChange < -0.1) {
+                    // Strategy is failing - reduce confidence and increase risk-taking
+                    this.currentStrategy.confidence *= 0.8;
+                    this.currentStrategy.riskLevel = Math.min(1.0, this.currentStrategy.riskLevel + 0.1);
+                }
+                
+                this.currentStrategy.lastPerformance = currentPerformance;
+            }
+            
+            // DYNAMIC DECISION ENGINE: Strategy changes behavior
+            makeAdaptiveDecision(r1, r2, price, history, data) {
+                const strategy = this.currentStrategy.primary;
+                const confidence = this.currentStrategy.confidence;
+                const riskLevel = this.currentStrategy.riskLevel;
+                
+                // CONFIDENCE-ADJUSTED THRESHOLDS
+                let buyThreshold = 0.5;
+                let sellThreshold = 0.5;
+                
+                switch(strategy) {
+                    case 'Aggressive':
+                        buyThreshold = 0.8 * confidence;
+                        sellThreshold = 0.8 * confidence;
+                        break;
+                        
+                    case 'Momentum':
+                        if (history.length >= 2) {
+                            const trend = price > history[history.length - 2] ? 1 : -1;
+                            if (trend > 0) {
+                                buyThreshold = 0.7 * confidence;
+                                sellThreshold = 0.9; // Resist selling in uptrend
+                            } else {
+                                buyThreshold = 0.9; // Resist buying in downtrend
+                                sellThreshold = 0.7 * confidence;
+                            }
+                        }
+                        break;
+                        
+                    case 'Contrarian':
+                        if (history.length >= 2) {
+                            const trend = price > history[history.length - 2] ? 1 : -1;
+                            if (trend > 0) {
+                                sellThreshold = 0.7 * confidence; // Sell into strength
+                                buyThreshold = 0.9;
+                            } else {
+                                buyThreshold = 0.7 * confidence; // Buy into weakness
+                                sellThreshold = 0.9;
+                            }
+                        }
+                        break;
+                        
+                    case 'Conservative':
+                        buyThreshold = 0.3 * confidence;
+                        sellThreshold = 0.3 * confidence;
+                        break;
+                        
+                    default: // General
+                        buyThreshold = 0.5 * confidence * riskLevel;
+                        sellThreshold = 0.5 * confidence * riskLevel;
+                }
+                
+                // MAKE DECISION
+                if (r1 < buyThreshold) return 'BUY';
+                if (r2 < sellThreshold) return 'SELL';
+                return 'HOLD';
+            }
+            
+            // UTILITY FUNCTIONS
+            calculateVolatility(prices) {
+                if (prices.length < 2) return 0;
+                const returns = [];
+                for (let i = 1; i < prices.length; i++) {
+                    returns.push((prices[i] - prices[i-1]) / prices[i-1]);
+                }
+                const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length;
+                const variance = returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length;
+                return Math.sqrt(variance);
+            }
+            
+            calculateTrend(prices) {
+                if (prices.length < 2) return 0;
+                return (prices[prices.length - 1] - prices[0]) / prices[0];
+            }
+            
+            recordDecision(decision, data) {
+                // Could expand this to track decision quality over time
+                this.lastAdaptation = Date.now();
+            }
+            
+            // INTROSPECTION: Get current strategy info for admin panel
+            getCurrentStrategyInfo() {
+                return {
+                    strategy: this.currentStrategy.primary,
+                    confidence: (this.currentStrategy.confidence * 100).toFixed(0) + '%',
+                    riskLevel: (this.currentStrategy.riskLevel * 100).toFixed(0) + '%',
+                    adaptations: this.adaptationHistory.length
+                };
+            }
+        }
+        
+        // Trading System State
+        let currentPrice = 100.00;
+        let priceHistory = [100.00];
+        let isProcessingTrades = false;
+        let tradingPaused = false;
+        let updateQueue = new Set();
+        
+        // Trading material states - Professional implementation
+        const TRADING_MATERIALS = {
+            BUY: new THREE.MeshBasicMaterial({ 
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.9
+            }),
+            SELL: new THREE.MeshBasicMaterial({ 
+                color: 0xff4444,
+                transparent: true,
+                opacity: 0.9
+            }),
+            HOLD: new THREE.MeshBasicMaterial({ 
+                color: 0x4a90e2,
+                transparent: true,
+                opacity: 0.8
+            }),
+            PROFIT: new THREE.MeshBasicMaterial({ 
+                color: 0x00ff00,
+                transparent: true,
+                opacity: 1.0
+            }),
+            LOSS: new THREE.MeshBasicMaterial({ 
+                color: 0xff0000,
+                transparent: true,
+                opacity: 1.0
+            })
+        };
+        
+        // Professional visual enhancement system
+        class VisualEffectManager {
+            constructor() {
+                this.animatingBoxes = new Map();
+                this.effectQueue = [];
+            }
+            
+            // Add pulsing effect for recent trades
+            addTradeEffect(mesh, action, intensity = 1.0) {
+                const effectId = `${mesh.userData.ringIndex}.${mesh.userData.boxIndex}`;
+                
+                // Cancel any existing animation for this box
+                if (this.animatingBoxes.has(effectId)) {
+                    clearInterval(this.animatingBoxes.get(effectId));
+                }
+                
+                // Create pulsing effect
+                let pulseStep = 0;
+                const maxPulses = 3;
+                const originalScale = mesh.scale.clone();
+                
+                const pulseInterval = setInterval(() => {
+                    const pulseValue = 1 + Math.sin(pulseStep * 0.3) * 0.2 * intensity;
+                    mesh.scale.setScalar(pulseValue);
+                    
+                    pulseStep++;
+                    if (pulseStep > maxPulses * 20) { // ~3 seconds
+                        mesh.scale.copy(originalScale);
+                        clearInterval(pulseInterval);
+                        this.animatingBoxes.delete(effectId);
+                    }
+                }, 50);
+                
+                this.animatingBoxes.set(effectId, pulseInterval);
+            }
+            
+            // Add profit/loss color intensity based on performance
+            updatePerformanceVisual(mesh, profitLoss, balance) {
+                const profitPercent = profitLoss / balance;
+                
+                if (Math.abs(profitPercent) > 0.05) { // 5% threshold
+                    const intensity = Math.min(1.0, Math.abs(profitPercent) * 5);
+                    
+                    if (profitPercent > 0) {
+                        // Profitable - brighter green
+                        mesh.material.color.setHex(0x00ff00);
+                        mesh.material.opacity = 0.7 + (intensity * 0.3);
+                    } else {
+                        // Loss - brighter red  
+                        mesh.material.color.setHex(0xff0000);
+                        mesh.material.opacity = 0.7 + (intensity * 0.3);
+                    }
+                } else {
+                    // Neutral performance - restore action color
+                    const currentAction = mesh.userData.currentMaterial || 'HOLD';
+                    const baseMaterial = TRADING_MATERIALS[currentAction];
+                    mesh.material.color.copy(baseMaterial.color);
+                    mesh.material.opacity = baseMaterial.opacity;
+                }
+            }
+            
+            // Add subtle hover effect for center ring
+            highlightCenterRing(ringIndex) {
+                if (ringGroups[ringIndex]) {
+                    ringGroups[ringIndex].forEach((mesh, index) => {
+                        if (!mesh.userData.clicked) {
+                            // Subtle scale increase for center ring
+                            mesh.scale.setScalar(1.1);
+                            
+                            // Slight opacity increase
+                            mesh.material.opacity = Math.min(1.0, mesh.material.opacity + 0.2);
+                        }
+                    });
+                }
+            }
+            
+            // Reset center ring effects
+            resetCenterRingEffects(ringIndex) {
+                if (ringGroups[ringIndex]) {
+                    ringGroups[ringIndex].forEach(mesh => {
+                        if (!mesh.userData.clicked) {
+                            mesh.scale.setScalar(1.0);
+                            
+                            // Restore original opacity based on action
+                            const currentAction = mesh.userData.currentMaterial || 'HOLD';
+                            const baseMaterial = TRADING_MATERIALS[currentAction];
+                            mesh.material.opacity = baseMaterial.opacity;
+                        }
+                    });
+                }
+            }
+            
+            // Cleanup all effects
+            cleanup() {
+                for (const [id, interval] of this.animatingBoxes) {
+                    clearInterval(interval);
+                }
+                this.animatingBoxes.clear();
+            }
+        }
+        
+        // Initialize visual effect manager
+        const visualEffects = new VisualEffectManager();
+        
+        // Session-Only Data Management (Works in Claude.ai environment)
+        class SessionDataManager {
+            static sessionData = {
+                initialized: false,
+                startTime: Date.now()
+            };
+            
+            static initializeSession() {
+                if (!this.sessionData.initialized) {
+                    this.sessionData.initialized = true;
+                    this.sessionData.startTime = Date.now();
+                }
+            }
+            
+            static getSessionInfo() {
+                const uptime = Date.now() - this.sessionData.startTime;
+                const uptimeMinutes = Math.floor(uptime / 60000);
+                const uptimeSeconds = Math.floor((uptime % 60000) / 1000);
+                
+                return {
+                    uptime: `${uptimeMinutes}m ${uptimeSeconds}s`,
+                    startTime: new Date(this.sessionData.startTime).toLocaleTimeString(),
+                    tradesThisSession: this.getTotalTrades()
+                };
+            }
+            
+            static getTotalTrades() {
+                let total = 0;
+                for (let boxId in boxData) {
+                    total += boxData[boxId].totalTrades || 0;
+                }
+                return total;
+            }
+            
+            static exportSessionData() {
+                const exportObj = {
+                    boxData: boxData,
+                    priceHistory: priceHistory,
+                    currentPrice: currentPrice,
+                    sessionInfo: this.getSessionInfo(),
+                    timestamp: Date.now(),
+                    version: '1.0'
+                };
+                return exportObj;
+            }
+            
+            static restoreSessionData(data) {
+                if (data.boxData) {
+                    boxData = data.boxData;
+                }
+                if (data.priceHistory) {
+                    priceHistory = data.priceHistory;
+                    updatePriceChart();
+                }
+                if (data.currentPrice) {
+                    currentPrice = data.currentPrice;
+                    document.getElementById('currentPrice').textContent = currentPrice.toFixed(2);
+                }
+                
+                // Update visuals based on restored data
+                this.updateVisualsFromData();
+                
+                return true;
+            }
+            
+            static updateVisualsFromData() {
+                // Update all visual states based on current trading data
+                for (let boxId in boxData) {
+                    const [ringIndex, boxIndex] = boxId.split('.').map(Number);
+                    if (ringGroups[ringIndex] && ringGroups[ringIndex][boxIndex]) {
+                        const mesh = ringGroups[ringIndex][boxIndex];
+                        const data = boxData[boxId];
+                        
+                        if (data.lastAction && data.lastAction !== 'HOLD') {
+                            updateBoxVisualForAction(mesh, data.lastAction, data);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Tab Management System
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Refresh leaderboard if switching to it
+            if (tabName === 'leaderboard') {
+                refreshLeaderboard();
+            }
+        }
+        
+        // Leaderboard Management System
+        class LeaderboardManager {
+            static calculateLeaderboard() {
+                const performers = [];
+                
+                for (let boxId in boxData) {
+                    const data = boxData[boxId];
+                    if (data.status === 'Active') {
+                        performers.push({
+                            id: boxId,
+                            name: boxId,
+                            trades: data.totalTrades || 0,
+                            profitLoss: data.profitLoss || 0,
+                            balance: data.accountBalance || 1000,
+                            winRate: this.calculateWinRate(data),
+                            category: data.category || 'General'
+                        });
+                    }
+                }
+                
+                // Sort by profit/loss descending
+                performers.sort((a, b) => b.profitLoss - a.profitLoss);
+                
+                return performers;
+            }
+            
+            static calculateWinRate(data) {
+                // Simple win rate calculation based on profit/loss
+                if (data.totalTrades === 0) return 0;
+                return data.profitLoss > 0 ? 75 : 25; // Simplified for now
+            }
+            
+            static displayLeaderboard() {
+                const performers = this.calculateLeaderboard();
+                const top15 = performers.slice(0, 15);
+                const leaderboardContent = document.getElementById('leaderboardContent');
+                
+                leaderboardContent.innerHTML = '';
+                
+                top15.forEach((performer, index) => {
+                    const entry = document.createElement('div');
+                    entry.className = `leaderboard-entry`;
+                    
+                    // Add special styling for top 3
+                    if (index < 3) {
+                        entry.classList.add('top-3');
+                    }
+                    
+                    // Add profit/loss styling
+                    if (performer.profitLoss > 0) {
+                        entry.classList.add('profitable');
+                    } else if (performer.profitLoss < 0) {
+                        entry.classList.add('losing');
+                    }
+                    
+                    // Medal for top 3
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    else if (index === 1) medal = '🥈';
+                    else if (index === 2) medal = '🥉';
+                    
+                    // P&L color class
+                    let pnlClass = 'pnl-neutral';
+                    if (performer.profitLoss > 0) pnlClass = 'pnl-positive';
+                    else if (performer.profitLoss < 0) pnlClass = 'pnl-negative';
+                    
+                    entry.innerHTML = `
+                        <div class="rank-col">
+                            <span class="medal">${medal}</span>${index + 1}
+                        </div>
+                        <div class="name-col">${performer.name}</div>
+                        <div class="trades-col">${performer.trades}</div>
+                        <div class="pnl-col ${pnlClass}">${performer.profitLoss.toFixed(2)}</div>
+                    `;
+                    
+                    // Add click handler to highlight box in 3D
+                    entry.onclick = () => {
+                        highlightBoxIn3D(performer.id);
+                        // Switch to trading tab to see the highlighted box
+                        setTimeout(() => {
+                            switchTab('trading');
+                            document.querySelectorAll('.tab-btn')[0].click();
+                        }, 500);
+                    };
+                    
+                    leaderboardContent.appendChild(entry);
+                });
+                
+                // Update leaderboard stats
+                this.updateLeaderboardStats(performers);
+            }
+            
+            static updateLeaderboardStats(performers) {
+                if (performers.length === 0) return;
+                
+                const best = performers[0];
+                const worst = performers[performers.length - 1];
+                const totalTrades = performers.reduce((sum, p) => sum + p.trades, 0);
+                const avgPnL = performers.reduce((sum, p) => sum + p.profitLoss, 0) / performers.length;
+                
+                document.getElementById('bestPerformer').textContent = `${best.name} (+${best.profitLoss.toFixed(2)})`;
+                document.getElementById('worstPerformer').textContent = `${worst.name} (${worst.profitLoss.toFixed(2)})`;
+                document.getElementById('totalTrades').textContent = totalTrades;
+                document.getElementById('avgPnL').textContent = `${avgPnL.toFixed(2)}`;
+            }
+        }
+        
+        // Tab switching with proper event handling
+        function switchTab(tabName) {
+            // Remove active class from all tabs and content
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to selected tab and content
+            const targetTab = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+                btn.textContent.toLowerCase() === tabName.toLowerCase()
+            );
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+            
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Refresh leaderboard if switching to it
+            if (tabName === 'leaderboard') {
+                refreshLeaderboard();
+            }
+        }
+        
+        // Enhanced export/import for session data
+        function exportData() {
+            const exportObj = SessionDataManager.exportSessionData();
+            
+            const dataStr = JSON.stringify(exportObj, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            link.download = `eye_of_market_session_${timestamp}.json`;
+            link.click();
+        }
+        
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const importedData = JSON.parse(event.target.result);
+                            
+                            SessionDataManager.restoreSessionData(importedData);
+                            
+                            // Refresh displays
+                            if (currentSelectedRing >= 0) {
+                                populateBoxes(currentSelectedRing);
+                            }
+                            refreshLeaderboard();
+                            
+                            alert('Session data imported successfully!');
+                        } catch (error) {
+                            alert('Invalid JSON file: ' + error.message);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+        
+        // Refresh leaderboard function
+        function refreshLeaderboard() {
+            LeaderboardManager.displayLeaderboard();
+        }
+        
+        // Price submission and processing
+        function submitPrice() {
+            const priceField = document.getElementById('priceField');
+            const newPrice = parseFloat(priceField.value);
+            
+            if (!newPrice || newPrice <= 0) {
+                alert('Please enter a valid price');
+                return;
+            }
+            
+            if (isProcessingTrades) {
+                alert('Currently processing trades, please wait...');
+                return;
+            }
+            
+            processNewPrice(newPrice);
+            priceField.value = '';
+        }
+        
+        function processNewPrice(newPrice) {
+            currentPrice = newPrice;
+            priceHistory.push(newPrice);
+            
+            // Update UI
+            document.getElementById('currentPrice').textContent = newPrice.toFixed(2);
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            updatePriceChart();
+            
+            // Process all trading decisions
+            if (!tradingPaused) {
+                processAllTradingDecisions();
+            }
+        }
+        
+        // Batch processing for 10,000 trading decisions
+        function processAllTradingDecisions() {
+            isProcessingTrades = true;
+            document.getElementById('processingStatus').textContent = 'Processing...';
+            document.getElementById('submitPriceBtn').disabled = true;
+            
+            const startTime = performance.now();
+            let processed = 0;
+            let buyCount = 0, sellCount = 0, holdCount = 0;
+            
+            const chunkSize = 500; // Process in chunks to prevent UI blocking
+            
+            function processChunk() {
+                const endIndex = Math.min(processed + chunkSize, 10000);
+                
+                for (let i = processed; i < endIndex; i++) {
+                    const ring = Math.floor(i / 100);
+                    const box = i % 100;
+                    const boxId = `${ring}.${box}`;
+                    
+                    if (boxData[boxId] && boxData[boxId].status === 'Active') {
+                        const trader = new AdaptiveBoxTrader(boxId, boxData[boxId].tradingProfile);
+                        const action = trader.makeDecision(currentPrice, priceHistory);
+                        
+                        executeTradeAction(boxId, action);
+                        
+                        // Count actions
+                        switch(action) {
+                            case 'BUY': buyCount++; break;
+                            case 'SELL': sellCount++; break;
+                            case 'HOLD': holdCount++; break;
+                        }
+                    }
+                }
+                
+                processed = endIndex;
+                
+                if (processed < 10000) {
+                    requestAnimationFrame(processChunk);
+                } else {
+                    // Processing complete
+                    isProcessingTrades = false;
+                    document.getElementById('processingStatus').textContent = 'Complete';
+                    document.getElementById('submitPriceBtn').disabled = false;
+                    
+                    // Update stats
+                    document.getElementById('buyingCount').textContent = buyCount;
+                    document.getElementById('sellingCount').textContent = sellCount;
+                    document.getElementById('holdingCount').textContent = holdCount;
+                    
+                    // Refresh leaderboard if it's currently visible
+                    if (document.getElementById('leaderboardTab').classList.contains('active')) {
+                        refreshLeaderboard();
+                    }
+                    
+                    // Reset status after 2 seconds
+                    setTimeout(() => {
+                        if (!isProcessingTrades) {
+                            document.getElementById('processingStatus').textContent = 'Ready';
+                        }
+                    }, 2000);
+                }
+            }
+            
+            processChunk();
+        }
+        
+        // Execute individual trade action - MERIT-BASED POSITION SIZING
+        function executeTradeAction(boxId, action) {
+            const data = boxData[boxId];
+            if (!data) return;
+            
+            const [ringIndex, boxIndex] = boxId.split('.').map(Number);
+            const mesh = ringGroups[ringIndex] && ringGroups[ringIndex][boxIndex];
+            
+            if (!mesh) return;
+            
+            // Update trading data
+            data.lastAction = action;
+            data.lastTradeTime = Date.now();
+            data.totalTrades++;
+            
+            // MERIT-BASED POSITION SIZING: Success breeds larger positions
+            const sharePrice = currentPrice;
+            
+            // Create trader instance to get current strategy metrics
+            const trader = new AdaptiveBoxTrader(boxId, data.tradingProfile);
+            trader.adaptToMarketRegime(currentPrice, priceHistory);
+            trader.adaptToPersonalPerformance(data);
+            
+            // Calculate merit-based position size
+            const baseSize = Math.floor(data.tradingProfile.riskTolerance * 5) + 1; // 1-5 base
+            const strategyConfidence = trader.currentStrategy.confidence; // 0.0 - 1.0
+            const recentPerformance = calculatePerformanceMultiplier(data); // 0.5 - 2.0
+            
+            // MERIT FORMULA: Base * Confidence * Performance = Dynamic sizing
+            let meritMultiplier = strategyConfidence * recentPerformance;
+            meritMultiplier = Math.max(0.5, Math.min(3.0, meritMultiplier)); // Cap between 0.5x - 3.0x
+            
+            const positionSize = Math.floor(baseSize * meritMultiplier);
+            
+            // Store position sizing info for debugging
+            data.lastPositionSize = positionSize;
+            data.lastMeritMultiplier = meritMultiplier;
+            data.lastConfidence = strategyConfidence;
+            data.lastPerformanceMultiplier = recentPerformance;
+            
+            switch(action) {
+                case 'BUY':
+                    // Merit constraint: Can only buy what you can afford (realistic)
+                    if (data.accountBalance >= sharePrice * positionSize) {
+                        data.currentPosition += positionSize;
+                        data.accountBalance -= sharePrice * positionSize;
+                    } else {
+                        // Partial fill if can't afford full position
+                        const affordableShares = Math.floor(data.accountBalance / sharePrice);
+                        if (affordableShares > 0) {
+                            data.currentPosition += affordableShares;
+                            data.accountBalance -= sharePrice * affordableShares;
+                            data.lastPositionSize = affordableShares; // Record actual size
+                        }
+                    }
+                    break;
+                case 'SELL':
+                    // Merit constraint: Can only sell what you own (realistic)
+                    if (data.currentPosition >= positionSize) {
+                        data.currentPosition -= positionSize;
+                        data.accountBalance += sharePrice * positionSize;
+                    } else {
+                        // Partial fill - sell all available shares
+                        if (data.currentPosition > 0) {
+                            data.accountBalance += sharePrice * data.currentPosition;
+                            data.lastPositionSize = data.currentPosition; // Record actual size
+                            data.currentPosition = 0;
+                        }
+                    }
+                    break;
+                case 'HOLD':
+                    // No action needed
+                    break;
+            }
+            
+            // Calculate profit/loss
+            const portfolioValue = data.accountBalance + (data.currentPosition * currentPrice);
+            data.profitLoss = portfolioValue - data.initialBalance;
+            
+            // Update visual
+            updateBoxVisualForAction(mesh, action, data);
+            
+            // Update admin panel if this box is visible
+            updateAdminBoxDisplay(boxId);
+        }
+        
+        // PERFORMANCE MULTIPLIER: Recent success increases position sizing power
+        function calculatePerformanceMultiplier(data) {
+            const performancePercent = data.profitLoss / data.initialBalance;
+            
+            // PERFORMANCE SCALING:
+            // -50% loss = 0.5x multiplier (smaller positions)
+            // 0% = 1.0x multiplier (normal positions) 
+            // +50% gain = 2.0x multiplier (larger positions)
+            // +100% gain = 3.0x multiplier (maximum positions)
+            
+            if (performancePercent >= 0) {
+                // Winning traders get larger positions (capped at 2.0x)
+                return Math.min(2.0, 1.0 + performancePercent);
+            } else {
+                // Losing traders get smaller positions (min 0.5x)
+                return Math.max(0.5, 1.0 + (performancePercent * 0.5));
+            }
+        }
+        
+        // Update box visual based on trading action - Professional implementation
+        function updateBoxVisualForAction(mesh, action, data) {
+            // Set base material based on action
+            const baseMaterial = TRADING_MATERIALS[action];
+            mesh.material.color.copy(baseMaterial.color);
+            mesh.material.opacity = baseMaterial.opacity;
+            mesh.material.transparent = true;
+            
+            // Store current action for future reference
+            mesh.userData.currentMaterial = action;
+            
+            // Calculate performance-based visual enhancement
+            const profitPercent = data.profitLoss / data.initialBalance;
+            
+            // Apply performance-based visual effects
+            visualEffects.updatePerformanceVisual(mesh, data.profitLoss, data.initialBalance);
+            
+            // Add pulsing effect for significant trades
+            const positionValue = Math.abs(data.currentPosition * currentPrice);
+            const tradeIntensity = Math.min(1.0, positionValue / 1000); // Normalize to account balance
+            
+            if (action !== 'HOLD' && tradeIntensity > 0.1) {
+                visualEffects.addTradeEffect(mesh, action, tradeIntensity);
+            }
+            
+            // Additional visual feedback for significant profit/loss
+            if (Math.abs(profitPercent) > 0.2) { // 20% profit/loss threshold
+                const effectIntensity = Math.min(1.0, Math.abs(profitPercent) * 2);
+                visualEffects.addTradeEffect(mesh, profitPercent > 0 ? 'PROFIT' : 'LOSS', effectIntensity);
+            }
+        }
+        
+        // Update admin panel display for a specific box
+        function updateAdminBoxDisplay(boxId) {
+            const data = boxData[boxId];
+            if (!data) return;
+            
+            const balanceElement = document.getElementById(`balance-${boxId}`);
+            const positionElement = document.getElementById(`position-${boxId}`);
+            const actionElement = document.getElementById(`lastAction-${boxId}`);
+            
+            if (balanceElement) balanceElement.textContent = data.accountBalance.toFixed(2);
+            if (positionElement) positionElement.textContent = data.currentPosition;
+            if (actionElement) actionElement.textContent = data.lastAction;
+        }
+        
+        // Update price chart visualization - GRADIENT LINE STYLE
+        function updatePriceChart() {
+            const chartContainer = document.getElementById('priceChart');
+            const maxPoints = 50; // Show last 50 price points
+            
+            // Keep only recent history
+            if (priceHistory.length > maxPoints) {
+                priceHistory = priceHistory.slice(-maxPoints);
+            }
+            
+            // Clear previous chart
+            chartContainer.innerHTML = '';
+            
+            if (priceHistory.length < 2) return;
+            
+            // Calculate min/max for scaling
+            const minPrice = Math.min(...priceHistory);
+            const maxPrice = Math.max(...priceHistory);
+            const priceRange = maxPrice - minPrice || 1;
+            
+            // Create SVG for gradient lines
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.style.width = '100%';
+            svg.style.height = '100%';
+            svg.style.position = 'absolute';
+            svg.style.top = '0';
+            svg.style.left = '0';
+            
+            const chartWidth = chartContainer.offsetWidth;
+            const chartHeight = chartContainer.offsetHeight;
+            const pointWidth = chartWidth / (priceHistory.length - 1);
+            
+            // Create gradient definitions
+            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            
+            // Upward gradient (green)
+            const upGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            upGradient.id = 'upGradient';
+            upGradient.setAttribute('x1', '0%');
+            upGradient.setAttribute('y1', '0%');
+            upGradient.setAttribute('x2', '100%');
+            upGradient.setAttribute('y2', '0%');
+            
+            const upStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            upStop1.setAttribute('offset', '0%');
+            upStop1.setAttribute('stop-color', '#00ff88');
+            upStop1.setAttribute('stop-opacity', '0.8');
+            
+            const upStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            upStop2.setAttribute('offset', '100%');
+            upStop2.setAttribute('stop-color', '#00cc6a');
+            upStop2.setAttribute('stop-opacity', '1.0');
+            
+            upGradient.appendChild(upStop1);
+            upGradient.appendChild(upStop2);
+            
+            // Downward gradient (red)
+            const downGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            downGradient.id = 'downGradient';
+            downGradient.setAttribute('x1', '0%');
+            downGradient.setAttribute('y1', '0%');
+            downGradient.setAttribute('x2', '100%');
+            downGradient.setAttribute('y2', '0%');
+            
+            const downStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            downStop1.setAttribute('offset', '0%');
+            downStop1.setAttribute('stop-color', '#ff6b6b');
+            downStop1.setAttribute('stop-opacity', '0.8');
+            
+            const downStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            downStop2.setAttribute('offset', '100%');
+            downStop2.setAttribute('stop-color', '#ff4444');
+            downStop2.setAttribute('stop-opacity', '1.0');
+            
+            downGradient.appendChild(downStop1);
+            downGradient.appendChild(downStop2);
+            
+            // Neutral gradient (blue)
+            const neutralGradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+            neutralGradient.id = 'neutralGradient';
+            neutralGradient.setAttribute('x1', '0%');
+            neutralGradient.setAttribute('y1', '0%');
+            neutralGradient.setAttribute('x2', '100%');
+            neutralGradient.setAttribute('y2', '0%');
+            
+            const neutralStop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            neutralStop1.setAttribute('offset', '0%');
+            neutralStop1.setAttribute('stop-color', '#4a90e2');
+            neutralStop1.setAttribute('stop-opacity', '0.8');
+            
+            const neutralStop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+            neutralStop2.setAttribute('offset', '100%');
+            neutralStop2.setAttribute('stop-color', '#357abd');
+            neutralStop2.setAttribute('stop-opacity', '1.0');
+            
+            neutralGradient.appendChild(neutralStop1);
+            neutralGradient.appendChild(neutralStop2);
+            
+            defs.appendChild(upGradient);
+            defs.appendChild(downGradient);
+            defs.appendChild(neutralGradient);
+            svg.appendChild(defs);
+            
+            // Draw gradient line segments
+            for (let i = 1; i < priceHistory.length; i++) {
+                const prevX = (i - 1) * pointWidth;
+                const currX = i * pointWidth;
+                
+                const prevY = chartHeight - ((priceHistory[i-1] - minPrice) / priceRange) * chartHeight;
+                const currY = chartHeight - ((priceHistory[i] - minPrice) / priceRange) * chartHeight;
+                
+                // Create line segment
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', prevX);
+                line.setAttribute('y1', prevY);
+                line.setAttribute('x2', currX);
+                line.setAttribute('y2', currY);
+                line.setAttribute('stroke-width', '3');
+                
+                // Determine gradient based on price movement
+                const priceChange = priceHistory[i] - priceHistory[i-1];
+                if (priceChange > 0) {
+                    line.setAttribute('stroke', 'url(#upGradient)');
+                } else if (priceChange < 0) {
+                    line.setAttribute('stroke', 'url(#downGradient)');
+                } else {
+                    line.setAttribute('stroke', 'url(#neutralGradient)');
+                }
+                
+                // Add subtle animation
+                line.style.opacity = '0';
+                line.style.transition = 'opacity 0.3s ease';
+                
+                svg.appendChild(line);
+                
+                // Animate in
+                setTimeout(() => {
+                    line.style.opacity = '1';
+                }, i * 20);
+            }
+            
+            // Add price points as circles
+            for (let i = 0; i < priceHistory.length; i++) {
+                const x = i * pointWidth;
+                const y = chartHeight - ((priceHistory[i] - minPrice) / priceRange) * chartHeight;
+                
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', x);
+                circle.setAttribute('cy', y);
+                circle.setAttribute('r', '2');
+                circle.setAttribute('fill', '#fff');
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', '1');
+                
+                svg.appendChild(circle);
+            }
+            
+            chartContainer.appendChild(svg);
+        }
+        
+        // Trading control functions
+        function pauseTrading() {
+            tradingPaused = true;
+            document.getElementById('pauseTrading').style.display = 'none';
+            document.getElementById('resumeTrading').style.display = 'block';
+        }
+        
+        function resumeTrading() {
+            tradingPaused = false;
+            document.getElementById('pauseTrading').style.display = 'block';
+            document.getElementById('resumeTrading').style.display = 'none';
+        }
+        
+        function resetAllBalances() {
+            if (confirm('Reset all account balances to $1000? This will reset the current session.')) {
+                // Cleanup all visual effects first
+                visualEffects.cleanup();
+                
+                for (let boxId in boxData) {
+                    boxData[boxId].accountBalance = 1000.00;
+                    boxData[boxId].initialBalance = 1000.00;
+                    boxData[boxId].currentPosition = 0;
+                    boxData[boxId].profitLoss = 0.00;
+                    boxData[boxId].totalTrades = 0;
+                    boxData[boxId].lastAction = 'HOLD';
+                }
+                
+                // Reset price data
+                currentPrice = 100.00;
+                priceHistory = [100.00];
+                document.getElementById('currentPrice').textContent = '100.00';
+                updatePriceChart();
+                
+                // Reset all visuals to default using professional system
+                objects.forEach(mesh => {
+                    const holdMaterial = TRADING_MATERIALS.HOLD;
+                    mesh.material.color.copy(holdMaterial.color);
+                    mesh.material.opacity = holdMaterial.opacity;
+                    mesh.material.transparent = true;
+                    mesh.scale.setScalar(1.0); // Reset any scaling effects
+                    mesh.userData.currentMaterial = 'HOLD';
+                });
+                
+                // Restart session tracking
+                SessionDataManager.sessionData.startTime = Date.now();
+                
+                // Refresh leaderboard
+                refreshLeaderboard();
+                
+                alert('Session reset successfully - starting fresh!');
+            }
+        }
+        
+        // DEBUGGING: Add experimental analysis tools
+        function analyzeDistribution() {
+            const winners = [];
+            const losers = [];
+            const neutral = [];
+            
+            for (let boxId in boxData) {
+                const profit = boxData[boxId].profitLoss || 0;
+                if (profit > 50) winners.push({id: boxId, profit});
+                else if (profit < -50) losers.push({id: boxId, profit});
+                else neutral.push({id: boxId, profit});
+            }
+            
+            console.log("=== DISTRIBUTION ANALYSIS ===");
+            console.log(`Winners (>$50): ${winners.length}`);
+            console.log(`Losers (<-$50): ${losers.length}`);
+            console.log(`Neutral: ${neutral.length}`);
+            
+            // Check if winners are clustered by box ID
+            const winnerRings = winners.map(w => parseInt(w.id.split('.')[0]));
+            const ringCounts = {};
+            winnerRings.forEach(ring => {
+                ringCounts[ring] = (ringCounts[ring] || 0) + 1;
+            });
+            
+            console.log("Winners by Ring (should be distributed):");
+            Object.entries(ringCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .forEach(([ring, count]) => {
+                    console.log(`Ring ${ring}: ${count} winners`);
+                });
+                
+            // Category analysis
+            const categoryPerformance = {};
+            for (let boxId in boxData) {
+                const category = boxData[boxId].category;
+                const profit = boxData[boxId].profitLoss || 0;
+                
+                if (!categoryPerformance[category]) {
+                    categoryPerformance[category] = { total: 0, count: 0, avg: 0 };
+                }
+                categoryPerformance[category].total += profit;
+                categoryPerformance[category].count += 1;
+            }
+            
+            console.log("\nAverage P&L by Category (Aggressive should be higher):");
+            for (let category in categoryPerformance) {
+                const avg = categoryPerformance[category].total / categoryPerformance[category].count;
+                categoryPerformance[category].avg = avg;
+                console.log(`${category}: ${avg.toFixed(2)} (${categoryPerformance[category].count} traders)`);
+            }
+            
+            return { winners, losers, ringCounts, categoryPerformance };
+        }
+        
+        // Add keyboard shortcut for analysis
+        function runExperimentalAnalysis() {
+            analyzeDistribution();
+            alert("Check browser console (F12) for distribution analysis!");
+        }
+        function updateTradingProfile(boxId, field, value) {
+            if (boxData[boxId]) {
+                if (!boxData[boxId].tradingProfile) {
+                    boxData[boxId].tradingProfile = {};
+                }
+                boxData[boxId].tradingProfile[field] = parseFloat(value);
+                
+                // Update display
+                const valueDisplay = event.target.parentNode.querySelector('.value-display');
+                if (valueDisplay) {
+                    valueDisplay.textContent = (parseFloat(value) * 100).toFixed(0) + '%';
+                }
+            }
+        }
+        
+        function simulateTradeForBox(boxId) {
+            if (!boxData[boxId] || isProcessingTrades) return;
+            
+            const trader = new AdaptiveBoxTrader(boxId, boxData[boxId].tradingProfile);
+            const action = trader.makeDecision(currentPrice, priceHistory);
+            
+            executeTradeAction(boxId, action);
+            
+            // Show strategy and merit info in alert
+            const strategyInfo = trader.getCurrentStrategyInfo();
+            const data = boxData[boxId];
+            const meritInfo = `
+Position Size: ${data.lastPositionSize || 'N/A'} shares
+Merit Multiplier: ${((data.lastMeritMultiplier || 1) * 100).toFixed(0)}%
+Performance Multiplier: ${((data.lastPerformanceMultiplier || 1) * 100).toFixed(0)}%`;
+            
+            alert(`Box ${boxId} executed: ${action}
+Current Strategy: ${strategyInfo.strategy}
+Confidence: ${strategyInfo.confidence}
+Adaptations: ${strategyInfo.adaptations}
+${meritInfo}`);
+            
+            // Refresh admin panel if showing this ring
+            const [ringIndex] = boxId.split('.').map(Number);
+            if (currentSelectedRing === ringIndex) {
+                populateBoxes(ringIndex);
+            }
+        }
+        
+        // Admin login functionality
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (username === 'admin' && password === '123') {
+                isAdminLoggedIn = true;
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('adminPanel').style.display = 'block';
+                populateRingList();
+                document.getElementById('loginError').style.display = 'none';
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+        
+        function logout() {
+            isAdminLoggedIn = false;
+            document.getElementById('adminPanel').style.display = 'none';
+            currentSelectedRing = -1;
+        }
+        
+        // Populate ring list in admin panel
+        function populateRingList() {
+            const ringList = document.getElementById('ringList');
+            ringList.innerHTML = '';
+            
+            for (let i = 0; i < totalRings; i++) {
+                const ringItem = document.createElement('div');
+                ringItem.className = 'ring-item';
+                ringItem.textContent = `Ring ${i} (${i}.0 - ${i}.99)`;
+                ringItem.onclick = () => selectRing(i);
+                ringList.appendChild(ringItem);
+            }
+        }
+        
+        // Select a ring in admin panel
+        function selectRing(ringIndex) {
+            currentSelectedRing = ringIndex;
+            
+            // Update active ring
+            document.querySelectorAll('.ring-item').forEach((item, index) => {
+                item.classList.toggle('active', index === ringIndex);
+            });
+            
+            // Update ring title
+            document.getElementById('ringTitle').textContent = `Ring ${ringIndex} - Boxes ${ringIndex}.0 to ${ringIndex}.99`;
+            
+            // Populate boxes for this ring
+            populateBoxes(ringIndex);
+        }
+        
+        // Populate boxes for selected ring
+        function populateBoxes(ringIndex) {
+            const boxContainer = document.getElementById('boxContainer');
+            boxContainer.innerHTML = '';
+            
+            for (let boxIndex = 0; boxIndex < 100; boxIndex++) {
+                const boxId = `${ringIndex}.${boxIndex}`;
+                const data = boxData[boxId];
+                
+                const boxItem = document.createElement('div');
+                boxItem.className = 'box-item';
+                if (data.isClicked) boxItem.classList.add('clicked');
+                if (data.isHighlighted) boxItem.classList.add('highlighted');
+                
+                boxItem.innerHTML = `
+                    <h4>Box ${boxId}</h4>
+                    <input type="text" placeholder="Title" value="${data.title}" 
+                           onchange="updateBoxData('${boxId}', 'title', this.value)" />
+                    <textarea placeholder="Description" 
+                              onchange="updateBoxData('${boxId}', 'description', this.value)">${data.description}</textarea>
+                    
+                    <label>Trading Category:</label>
+                    <select onchange="updateBoxData('${boxId}', 'category', this.value)">
+                        <option value="Aggressive" ${data.category === 'Aggressive' ? 'selected' : ''}>Aggressive</option>
+                        <option value="Momentum" ${data.category === 'Momentum' ? 'selected' : ''}>Momentum</option>
+                        <option value="Contrarian" ${data.category === 'Contrarian' ? 'selected' : ''}>Contrarian</option>
+                        <option value="General" ${data.category === 'General' ? 'selected' : ''}>General</option>
+                    </select>
+                    
+                    <select onchange="updateBoxData('${boxId}', 'status', this.value)">
+                        <option value="Active" ${data.status === 'Active' ? 'selected' : ''}>Active</option>
+                        <option value="Inactive" ${data.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+                        <option value="Maintenance" ${data.status === 'Maintenance' ? 'selected' : ''}>Maintenance</option>
+                    </select>
+                    
+                    <div class="trading-profile-controls">
+                        <h5 style="margin: 0 0 10px 0; color: #00ff88;">Trading Profile</h5>
+                        
+                        <div class="profile-slider">
+                            <label>Aggressiveness:</label>
+                            <input type="range" min="0" max="1" step="0.01" 
+                                   value="${data.tradingProfile?.aggressiveness || 0.5}"
+                                   onchange="updateTradingProfile('${boxId}', 'aggressiveness', this.value)">
+                            <span class="value-display">${((data.tradingProfile?.aggressiveness || 0.5) * 100).toFixed(0)}%</span>
+                        </div>
+                        
+                        <div class="profile-slider">
+                            <label>Risk Tolerance:</label>
+                            <input type="range" min="0" max="1" step="0.01" 
+                                   value="${data.tradingProfile?.riskTolerance || 0.5}"
+                                   onchange="updateTradingProfile('${boxId}', 'riskTolerance', this.value)">
+                            <span class="value-display">${((data.tradingProfile?.riskTolerance || 0.5) * 100).toFixed(0)}%</span>
+                        </div>
+                        
+                        <div class="profile-slider">
+                            <label>Momentum:</label>
+                            <input type="range" min="0" max="1" step="0.01" 
+                                   value="${data.tradingProfile?.momentum || 0.5}"
+                                   onchange="updateTradingProfile('${boxId}', 'momentum', this.value)">
+                            <span class="value-display">${((data.tradingProfile?.momentum || 0.5) * 100).toFixed(0)}%</span>
+                        </div>
+                        
+                        <div style="margin-top: 10px; font-size: 0.8em;">
+                            <div>Balance: $<span id="balance-${boxId}">${(data.accountBalance || 1000).toFixed(2)}</span></div>
+                            <div>Position: <span id="position-${boxId}">${data.currentPosition || 0}</span> shares</div>
+                            <div>Last Action: <span id="lastAction-${boxId}">${data.lastAction || 'HOLD'}</span></div>
+                            <div style="color: #00ff88;">Merit Info:</div>
+                            <div>• Position Size: ${data.lastPositionSize || 'N/A'} shares</div>
+                            <div>• Merit Multiplier: ${((data.lastMeritMultiplier || 1) * 100).toFixed(0)}%</div>
+                            <div>• Confidence: ${((data.lastConfidence || 0.7) * 100).toFixed(0)}%</div>
+                            <div>• Performance: ${((data.lastPerformanceMultiplier || 1) * 100).toFixed(0)}%</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <button class="admin-btn" onclick="highlightBoxIn3D('${boxId}')">Highlight in 3D</button>
+                        <button class="admin-btn" onclick="resetBoxStatus('${boxId}')">Reset</button>
+                        <button class="admin-btn" onclick="simulateTradeForBox('${boxId}')">Test Trade</button>
+                    </div>
+                `;
+                
+                boxContainer.appendChild(boxItem);
+            }
+        }
+        
+        // Update box data
+        function updateBoxData(boxId, field, value) {
+            if (boxData[boxId]) {
+                boxData[boxId][field] = value;
+            }
+        }
+        
+        // Highlight specific box in 3D view
+        function highlightBoxIn3D(boxId) {
+            const [ringIndex, boxIndex] = boxId.split('.').map(Number);
+            
+            // Reset all highlights first using professional system
+            for (let i = 0; i < totalRings; i++) {
+                visualEffects.resetCenterRingEffects(i);
+                ringGroups[i].forEach(mesh => {
+                    if (!mesh.userData.clicked) {
+                        // Restore to current trading material state
+                        const currentMaterial = mesh.userData.currentMaterial || 'HOLD';
+                        const baseMaterial = TRADING_MATERIALS[currentMaterial];
+                        mesh.material.color.copy(baseMaterial.color);
+                        mesh.material.opacity = baseMaterial.opacity;
+                        mesh.scale.setScalar(1.0);
+                    }
+                });
+            }
+            
+            // Highlight the specific box with professional effects
+            if (ringGroups[ringIndex] && ringGroups[ringIndex][boxIndex]) {
+                const mesh = ringGroups[ringIndex][boxIndex];
+                
+                // Use bright green for admin highlighting
+                mesh.material.color.setHex(0x00ff88);
+                mesh.material.opacity = 1.0;
+                mesh.scale.setScalar(1.3); // Slightly larger
+                
+                // Add pulsing effect to make it obvious
+                visualEffects.addTradeEffect(mesh, 'HIGHLIGHT', 1.0);
+                
+                boxData[boxId].isHighlighted = true;
+            }
+            
+            // Refresh admin panel if showing this ring
+            if (currentSelectedRing === ringIndex) {
+                populateBoxes(ringIndex);
+            }
+        }
+        
+        // Reset box status
+        function resetBoxStatus(boxId) {
+            const [ringIndex, boxIndex] = boxId.split('.').map(Number);
+            
+            // Reset trading data
+            boxData[boxId].isClicked = false;
+            boxData[boxId].isHighlighted = false;
+            boxData[boxId].accountBalance = 1000.00;
+            boxData[boxId].initialBalance = 1000.00;
+            boxData[boxId].currentPosition = 0;
+            boxData[boxId].profitLoss = 0.00;
+            boxData[boxId].totalTrades = 0;
+            boxData[boxId].lastAction = 'HOLD';
+            
+            // Reset visual in 3D using professional system
+            if (ringGroups[ringIndex] && ringGroups[ringIndex][boxIndex]) {
+                const mesh = ringGroups[ringIndex][boxIndex];
+                const holdMaterial = TRADING_MATERIALS.HOLD;
+                
+                mesh.material.color.copy(holdMaterial.color);
+                mesh.material.opacity = holdMaterial.opacity;
+                mesh.material.transparent = true;
+                mesh.scale.setScalar(1.0); // Reset any scaling effects
+                mesh.userData.currentMaterial = 'HOLD';
+                
+                if (clickedObjects.has(mesh.userData.id)) {
+                    clickedObjects.delete(mesh.userData.id);
+                    mesh.userData.clicked = false;
+                    document.getElementById('clickedCount').textContent = clickedObjects.size;
+                }
+                
+                // Clear any ongoing visual effects for this box
+                const effectId = `${ringIndex}.${boxIndex}`;
+                if (visualEffects.animatingBoxes.has(effectId)) {
+                    clearInterval(visualEffects.animatingBoxes.get(effectId));
+                    visualEffects.animatingBoxes.delete(effectId);
+                }
+            }
+            
+            // Refresh admin panel if showing this ring
+            if (currentSelectedRing === ringIndex) {
+                populateBoxes(ringIndex);
+            }
+        }
+        
+        // Ring highlighting functions
+        function highlightRingAtFixedPosition() {
+            // Reset all rings to their original trading state colors (except clicked ones)
+            for (let i = 0; i < totalRings; i++) {
+                visualEffects.resetCenterRingEffects(i);
+                ringGroups[i].forEach(mesh => {
+                    if (!mesh.userData.clicked) {
+                        // Restore to current trading material state
+                        const currentMaterial = mesh.userData.currentMaterial || 'HOLD';
+                        const baseMaterial = TRADING_MATERIALS[currentMaterial];
+                        mesh.material.color.copy(baseMaterial.color);
+                        mesh.material.opacity = baseMaterial.opacity;
+                    }
+                });
+            }
+            
+            // Calculate which ring should be highlighted based on rotation
+            const rotationSteps = Math.round(torusRotationOffset / ((Math.PI * 2) / totalRings));
+            const highlightRingIndex = (50 - rotationSteps + totalRings) % totalRings;
+            
+            // Highlight the ring that should currently be in the center position
+            if (highlightRingIndex >= 0 && highlightRingIndex < totalRings) {
+                // Use professional visual effects for center ring
+                visualEffects.highlightCenterRing(highlightRingIndex);
+                
+                // Update ring info panel
+                updateRingInfo(highlightRingIndex);
+            }
+        }
+        
+        // Update ring information panel with REAL TRADING DATA
+        function updateRingInfo(ringIndex) {
+            if (fixedViewMode) {
+                document.getElementById('ringInfo').style.display = 'block';
+                document.getElementById('currentRingId').textContent = ringIndex;
+                document.getElementById('boxRange').textContent = `${ringIndex}.0 - ${ringIndex}.99`;
+                
+                // CALCULATE REAL RING STATISTICS
+                const ringStats = calculateRingTradingStats(ringIndex);
+                
+                // Update ring data with real trading information
+                document.getElementById('totalBoxes').textContent = '100';
+                document.getElementById('clickedInRing').textContent = ringStats.clickedCount;
+                
+                // Add enhanced trading statistics to ring info
+                updateRingInfoDisplay(ringStats);
+                
+                // Animate box grid with P&L color coding
+                animateBoxGridWithPnL(ringIndex);
+            } else {
+                document.getElementById('ringInfo').style.display = 'none';
+            }
+        }
+        
+        // CALCULATE COMPREHENSIVE RING TRADING STATISTICS
+        function calculateRingTradingStats(ringIndex) {
+            let totalPnL = 0;
+            let totalTrades = 0;
+            let totalBalance = 0;
+            let totalPosition = 0;
+            let clickedCount = 0;
+            let activeTraders = 0;
+            let winningTraders = 0;
+            let losingTraders = 0;
+            let bestPerformer = null;
+            let worstPerformer = null;
+            let totalMerit = 0;
+            let categoryBreakdown = {};
+            let strategyBreakdown = {};
+            
+            // Analyze all 100 boxes in this ring
+            for (let boxIndex = 0; boxIndex < 100; boxIndex++) {
+                const boxId = `${ringIndex}.${boxIndex}`;
+                const data = boxData[boxId];
+                const mesh = ringGroups[ringIndex] && ringGroups[ringIndex][boxIndex];
+                
+                if (data && data.status === 'Active') {
+                    activeTraders++;
+                    totalPnL += data.profitLoss || 0;
+                    totalTrades += data.totalTrades || 0;
+                    totalBalance += data.accountBalance || 1000;
+                    totalPosition += data.currentPosition || 0;
+                    totalMerit += (data.lastMeritMultiplier || 1);
+                    
+                    // Performance categorization
+                    if (data.profitLoss > 0) winningTraders++;
+                    else if (data.profitLoss < 0) losingTraders++;
+                    
+                    // Track best/worst performers
+                    if (!bestPerformer || data.profitLoss > bestPerformer.pnl) {
+                        bestPerformer = { id: boxId, pnl: data.profitLoss };
+                    }
+                    if (!worstPerformer || data.profitLoss < worstPerformer.pnl) {
+                        worstPerformer = { id: boxId, pnl: data.profitLoss };
+                    }
+                    
+                    // Category breakdown
+                    const category = data.category || 'General';
+                    if (!categoryBreakdown[category]) {
+                        categoryBreakdown[category] = { count: 0, pnl: 0 };
+                    }
+                    categoryBreakdown[category].count++;
+                    categoryBreakdown[category].pnl += data.profitLoss || 0;
+                    
+                    // Strategy breakdown (current strategy for adaptive traders)
+                    const currentStrategy = data.lastAction || 'HOLD';
+                    if (!strategyBreakdown[currentStrategy]) {
+                        strategyBreakdown[currentStrategy] = 0;
+                    }
+                    strategyBreakdown[currentStrategy]++;
+                }
+                
+                // Check if clicked
+                if (mesh && mesh.userData.clicked) {
+                    clickedCount++;
+                }
+            }
+            
+            return {
+                clickedCount,
+                activeTraders,
+                totalPnL,
+                avgPnL: totalPnL / activeTraders,
+                totalTrades,
+                avgTrades: totalTrades / activeTraders,
+                totalBalance,
+                avgBalance: totalBalance / activeTraders,
+                totalPosition,
+                avgPosition: totalPosition / activeTraders,
+                winningTraders,
+                losingTraders,
+                neutralTraders: activeTraders - winningTraders - losingTraders,
+                bestPerformer,
+                worstPerformer,
+                avgMerit: totalMerit / activeTraders,
+                categoryBreakdown,
+                strategyBreakdown,
+                winRate: (winningTraders / activeTraders) * 100
+            };
+        }
+        
+        // UPDATE RING INFO DISPLAY WITH REAL DATA
+        function updateRingInfoDisplay(stats) {
+            const ringInfoElement = document.getElementById('ringInfo');
+            
+            // Remove old enhanced data if exists
+            const existingEnhanced = ringInfoElement.querySelector('.enhanced-ring-data');
+            if (existingEnhanced) {
+                existingEnhanced.remove();
+            }
+            
+            // Create enhanced ring data display
+            const enhancedData = document.createElement('div');
+            enhancedData.className = 'enhanced-ring-data';
+            enhancedData.style.marginTop = '15px';
+            enhancedData.style.fontSize = '0.85em';
+            enhancedData.style.borderTop = '1px solid #555';
+            enhancedData.style.paddingTop = '10px';
+            
+            // Performance indicators color coding
+            const pnlColor = stats.totalPnL >= 0 ? '#00ff88' : '#ff6b6b';
+            const winRateColor = stats.winRate >= 50 ? '#00ff88' : stats.winRate >= 30 ? '#ffc107' : '#ff6b6b';
+            
+            enhancedData.innerHTML = `
+                <div style="color: #4a90e2; font-weight: bold; margin-bottom: 8px;">📊 RING TRADING STATS</div>
+                
+                <div style="margin-bottom: 5px;">
+                    <strong>Total P&L:</strong> <span style="color: ${pnlColor};">${stats.totalPnL.toFixed(2)}</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Avg P&L:</strong> <span style="color: ${pnlColor};">${stats.avgPnL.toFixed(2)}</span>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Total Trades:</strong> ${stats.totalTrades} (avg: ${stats.avgTrades.toFixed(1)})
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <strong>Win Rate:</strong> <span style="color: ${winRateColor};">${stats.winRate.toFixed(1)}%</span>
+                </div>
+                
+                <div style="margin: 10px 0; color: #00ff88; font-weight: bold;">🏆 PERFORMANCE</div>
+                <div style="margin-bottom: 3px; font-size: 0.8em;">
+                    Winners: ${stats.winningTraders} | Losers: ${stats.losingTraders} | Neutral: ${stats.neutralTraders}
+                </div>
+                <div style="margin-bottom: 3px; font-size: 0.8em;">
+                    Best: ${stats.bestPerformer ? `${stats.bestPerformer.id} (+${stats.bestPerformer.pnl.toFixed(2)})` : 'N/A'}
+                </div>
+                <div style="margin-bottom: 5px; font-size: 0.8em;">
+                    Worst: ${stats.worstPerformer ? `${stats.worstPerformer.id} (${stats.worstPerformer.pnl.toFixed(2)})` : 'N/A'}
+                </div>
+                
+                <div style="margin: 10px 0; color: #ffc107; font-weight: bold;">💎 MERIT & POSITION</div>
+                <div style="margin-bottom: 3px; font-size: 0.8em;">
+                    Avg Merit: ${(stats.avgMerit * 100).toFixed(0)}%
+                </div>
+                <div style="margin-bottom: 3px; font-size: 0.8em;">
+                    Total Positions: ${stats.totalPosition} shares
+                </div>
+                <div style="margin-bottom: 5px; font-size: 0.8em;">
+                    Avg Balance: ${stats.avgBalance.toFixed(2)}
+                </div>
+                
+                <div style="margin: 10px 0; color: #ff6b6b; font-weight: bold;">📈 ACTIVITY</div>
+                <div style="font-size: 0.8em;">
+                    ${Object.entries(stats.strategyBreakdown).map(([action, count]) => 
+                        `${action}: ${count}`
+                    ).join(' | ')}
+                </div>
+            `;
+            
+            ringInfoElement.appendChild(enhancedData);
+        }
+        
+        // Animate box grid with P&L color coding
+        function animateBoxGridWithPnL(ringIndex) {
+            const boxGrid = document.getElementById('boxGrid');
+            boxGrid.innerHTML = '';
+            
+            // Create 100 mini boxes with P&L color coding
+            for (let i = 0; i < 100; i++) {
+                const boxId = `${ringIndex}.${i}`;
+                const data = boxData[boxId];
+                const miniBox = document.createElement('div');
+                miniBox.className = 'mini-box';
+                
+                // Color coding based on P&L performance
+                if (data) {
+                    const pnl = data.profitLoss || 0;
+                    if (pnl > 100) {
+                        miniBox.style.background = '#00ff00'; // Bright green for big winners
+                    } else if (pnl > 20) {
+                        miniBox.style.background = '#00ff88'; // Green for winners
+                    } else if (pnl > -20) {
+                        miniBox.style.background = '#4a90e2'; // Blue for neutral
+                    } else if (pnl > -100) {
+                        miniBox.style.background = '#ff6b6b'; // Red for losers
+                    } else {
+                        miniBox.style.background = '#ff0000'; // Bright red for big losers
+                    }
+                    
+                    // Add merit-based opacity
+                    const merit = data.lastMeritMultiplier || 1;
+                    miniBox.style.opacity = Math.max(0.4, Math.min(1.0, merit));
+                }
+                
+                // Check if this box is clicked in the actual ring
+                if (ringGroups[ringIndex][i].userData.clicked) {
+                    miniBox.classList.add('clicked');
+                    miniBox.style.border = '2px solid #fff';
+                }
+                
+                // Add tooltip with P&L info
+                miniBox.title = data ? `Box ${boxId}: ${(data.profitLoss || 0).toFixed(2)} P&L, ${data.totalTrades || 0} trades` : `Box ${boxId}`;
+                
+                boxGrid.appendChild(miniBox);
+                
+                // Animate with delay for card-dealing effect
+                setTimeout(() => {
+                    miniBox.classList.add('animate');
+                }, i * 15); // Faster animation
+            }
+        }
+
+        // Enhanced materials for professional trading visualization
+        const normalMaterial = new THREE.MeshBasicMaterial({ color: 0x4a90e2, transparent: true, opacity: 0.8 });
+        const highlightMaterial = new THREE.MeshBasicMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.9 });
+        const centerRingMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.9 });
+        
+        // Geometry (shared for performance)
+        const geometry = new THREE.BoxGeometry(0.05, 0.05, 0.05);
+        
+        // Arrays to store objects
+        const objects = [];
+        const clickedObjects = new Set();
+        const ringGroups = []; // Array to store objects grouped by ring level
+        
+        function createTorus() {
+            const majorRadius = 8;
+            const minorRadius = 3;
+            const objectsPerRow = 100; // 100 x 100 = 10,000
+            const objectsPerCircle = 100;
+            
+            // Initialize ring groups - each ring contains 100 boxes
+            for (let i = 0; i < objectsPerRow; i++) {
+                ringGroups[i] = [];
+            }
+            
+            for (let i = 0; i < objectsPerRow; i++) {
+                for (let j = 0; j < objectsPerCircle; j++) {
+                    // Parametric equations for torus
+                    const u = (i / objectsPerRow) * Math.PI * 2;
+                    const v = (j / objectsPerCircle) * Math.PI * 2;
+                    
+                    const x = (majorRadius + minorRadius * Math.cos(v)) * Math.cos(u);
+                    const y = (majorRadius + minorRadius * Math.cos(v)) * Math.sin(u);
+                    const z = minorRadius * Math.sin(v);
+                    
+                    // Create mesh with default HOLD material - Professional approach
+                    const material = new THREE.MeshBasicMaterial({
+                        color: TRADING_MATERIALS.HOLD.color,
+                        transparent: true,
+                        opacity: TRADING_MATERIALS.HOLD.opacity
+                    });
+                    
+                    const mesh = new THREE.Mesh(geometry, material);
+                    mesh.position.set(x, y, z);
+                    mesh.userData = { 
+                        id: i * objectsPerCircle + j, 
+                        clicked: false,
+                        ringIndex: i,
+                        boxIndex: j,
+                        originalMaterial: 'HOLD',
+                        currentMaterial: 'HOLD'
+                    };
+                    
+                    scene.add(mesh);
+                    objects.push(mesh);
+                    ringGroups[i].push(mesh);
+                }
+            }
+        }
+
+        // Raycaster for click detection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Mouse event handlers
+        function onMouseMove(event) {
+            if (isMouseDown && !fixedViewMode) {
+                const deltaX = event.clientX - mouseX;
+                const deltaY = event.clientY - mouseY;
+                
+                targetRotationY += deltaX * 0.01;
+                targetRotationX += deltaY * 0.01;
+                targetRotationX = Math.max(-Math.PI/2, Math.min(Math.PI/2, targetRotationX));
+                
+                mouseX = event.clientX;
+                mouseY = event.clientY;
+            }
+        }
+
+        function onMouseDown(event) {
+            isMouseDown = true;
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+        }
+
+        function onMouseUp(event) {
+            isMouseDown = false;
+        }
+
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(objects);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                const objectId = clickedObject.userData.id;
+                const ringIndex = clickedObject.userData.ringIndex;
+                const boxIndex = clickedObject.userData.boxIndex;
+                
+                if (!clickedObjects.has(objectId)) {
+                    clickedObjects.add(objectId);
+                    clickedObject.material = highlightMaterial.clone();
+                    clickedObject.userData.clicked = true;
+                    document.getElementById('clickedCount').textContent = clickedObjects.size;
+                    
+                    // Update box data for admin system
+                    const boxId = `${ringIndex}.${boxIndex}`;
+                    if (boxData[boxId]) {
+                        boxData[boxId].isClicked = true;
+                    }
+                    
+                    // Refresh admin panel if showing this ring
+                    if (currentSelectedRing === ringIndex) {
+                        populateBoxes(ringIndex);
+                    }
+                }
+            }
+        }
+
+        function onWheel(event) {
+            if (!fixedViewMode) {
+                zoom += event.deltaY * 0.01;
+                zoom = Math.max(5, Math.min(50, zoom));
+            }
+        }
+        
+        // View control functions with panel management
+        function setFixedView() {
+            fixedViewMode = !fixedViewMode;
+            if (fixedViewMode) {
+                // Camera position set ONCE and NEVER changes again
+                camera.position.set(-12.0, 0.1, 8.0);
+                camera.lookAt(0, 0, 0);
+                // Stop any rotation when in fixed view
+                targetRotationX = 0;
+                targetRotationY = 0;
+                rotationX = 0;
+                rotationY = 0;
+                // Reset rotation
+                torusRotationOffset = 0;
+                rotationSteps = 0;
+                // Reset torus rotations
+                scene.rotation.y = 0;
+                scene.rotation.z = 0;
+                // Show ring navigation
+                document.getElementById('ringNavigation').style.display = 'flex';
+                
+                // HIDE TRADING PANEL for clean fixed view
+                document.getElementById('tradingPanel').style.display = 'none';
+                
+                // Ring info will be shown automatically when navigating rings
+            } else {
+                // EXITING FIXED VIEW - Hide all fixed view elements
+                document.getElementById('ringNavigation').style.display = 'none';
+                document.getElementById('ringInfo').style.display = 'none'; // PREVENT OVERLAP
+                
+                // Reset all rings to their current trading state colors using professional system
+                for (let i = 0; i < totalRings; i++) {
+                    visualEffects.resetCenterRingEffects(i);
+                    ringGroups[i].forEach(mesh => {
+                        if (!mesh.userData.clicked) {
+                            const currentMaterial = mesh.userData.currentMaterial || 'HOLD';
+                            const baseMaterial = TRADING_MATERIALS[currentMaterial];
+                            mesh.material.color.copy(baseMaterial.color);
+                            mesh.material.opacity = baseMaterial.opacity;
+                        }
+                    });
+                }
+                // Reset everything
+                torusRotationOffset = 0;
+                rotationSteps = 0;
+                
+                // SHOW TRADING PANEL when returning to normal view
+                document.getElementById('tradingPanel').style.display = 'block';
+            }
+            updateButtonStates();
+        }
+        
+        function navigateRingUp() {
+            if (fixedViewMode) {
+                // UP button: rotate torus like a wheel
+                const ringStep = (Math.PI * 2) / totalRings;
+                torusRotationOffset += ringStep;
+                // No need to track currentRing anymore - highlighting is position-based
+            }
+        }
+        
+        function navigateRingDown() {
+            if (fixedViewMode) {
+                // DOWN button: rotate torus like a wheel
+                const ringStep = (Math.PI * 2) / totalRings;
+                torusRotationOffset -= ringStep;
+                // No need to track currentRing anymore - highlighting is position-based
+            }
+        }
+        
+        function updateButtonStates() {
+            const fixedViewBtn = document.getElementById('fixedViewBtn');
+            
+            if (fixedViewMode) {
+                fixedViewBtn.classList.add('active');
+                fixedViewBtn.textContent = 'Exit Fixed View';
+            } else {
+                fixedViewBtn.classList.remove('active');
+                fixedViewBtn.textContent = 'Fixed View (Hide Panels)';
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mouseup', onMouseUp);
+        document.addEventListener('click', onMouseClick);
+        document.addEventListener('wheel', onWheel);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            // Ctrl+A to open admin login
+            if (event.ctrlKey && event.key === 'a') {
+                event.preventDefault();
+                if (!isAdminLoggedIn) {
+                    document.getElementById('loginPanel').style.display = 'flex';
+                }
+            }
+            
+            // Ctrl+E to toggle info panels
+            if (event.ctrlKey && event.key === 'e') {
+                event.preventDefault();
+                const infoPanel = document.getElementById('info');
+                const statsPanel = document.getElementById('stats');
+                const isVisible = infoPanel.style.display !== 'none';
+                
+                infoPanel.style.display = isVisible ? 'none' : 'block';
+                statsPanel.style.display = isVisible ? 'none' : 'block';
+            }
+            
+            // Ctrl+T to focus price input
+            if (event.ctrlKey && event.key === 't') {
+                event.preventDefault();
+                document.getElementById('priceField').focus();
+            }
+            
+            // Ctrl+D for distribution analysis
+            if (event.ctrlKey && event.key === 'd') {
+                event.preventDefault();
+                runExperimentalAnalysis();
+            }
+            if (event.ctrlKey && event.key === 'l') {
+                event.preventDefault();
+                switchTab('leaderboard');
+                // Simulate click on leaderboard tab button
+                document.querySelectorAll('.tab-btn')[1].click();
+            }
+            
+            // Ctrl+1 for trading tab, Ctrl+2 for leaderboard tab
+            if (event.ctrlKey && event.key === '1') {
+                event.preventDefault();
+                switchTab('trading');
+                document.querySelectorAll('.tab-btn')[0].click();
+            }
+            
+            if (event.ctrlKey && event.key === '2') {
+                event.preventDefault();
+                switchTab('leaderboard');
+                document.querySelectorAll('.tab-btn')[1].click();
+            }
+            
+            // Enter key in price field to submit price
+            if (event.key === 'Enter' && event.target.id === 'priceField') {
+                submitPrice();
+            }
+            
+            // Enter key in login form
+            if (event.key === 'Enter' && document.getElementById('loginPanel').style.display !== 'none') {
+                login();
+            }
+            
+            // Escape to close panels
+            if (event.key === 'Escape') {
+                document.getElementById('loginPanel').style.display = 'none';
+                if (isAdminLoggedIn) {
+                    document.getElementById('adminPanel').style.display = 'none';
+                }
+            }
+            
+            // Space to pause/resume trading
+            if (event.key === ' ' && !event.target.matches('input, textarea')) {
+                event.preventDefault();
+                if (tradingPaused) {
+                    resumeTrading();
+                } else {
+                    pauseTrading();
+                }
+            }
+        });
+        
+        // Button event listeners
+        document.getElementById('fixedViewBtn').addEventListener('click', setFixedView);
+        document.getElementById('ringUpBtn').addEventListener('click', navigateRingUp);
+        document.getElementById('ringDownBtn').addEventListener('click', navigateRingDown);
+
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onWindowResize);
+
+        // FPS counter
+        let lastTime = 0;
+        let frameCount = 0;
+        
+        function updateFPS(currentTime) {
+            frameCount++;
+            if (currentTime - lastTime >= 1000) {
+                document.getElementById('fps').textContent = Math.round(frameCount * 1000 / (currentTime - lastTime));
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+        
+        function updateCameraPosition() {
+            const x = Math.round(camera.position.x * 10) / 10;
+            const y = Math.round(camera.position.y * 10) / 10;
+            const z = Math.round(camera.position.z * 10) / 10;
+            document.getElementById('cameraPos').textContent = `X: ${x}, Y: ${y}, Z: ${z}`;
+        }
+
+        // Animation loop
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            if (!fixedViewMode) {
+                // Smooth rotation
+                rotationX += (targetRotationX - rotationX) * 0.1;
+                rotationY += (targetRotationY - rotationY) * 0.1;
+                
+                // Update camera position
+                const radius = zoom;
+                camera.position.x = radius * Math.sin(rotationY) * Math.cos(rotationX);
+                camera.position.y = radius * Math.sin(rotationX);
+                camera.position.z = radius * Math.cos(rotationY) * Math.cos(rotationX);
+                camera.lookAt(0, 0, 0);
+                
+                // Add continuous rotation to the entire torus when not in fixed view
+                scene.rotation.y += 0.006;
+                
+                // Reset torus position when not in fixed view
+                scene.position.y = 0;
+                scene.rotation.z = 0;
+            } else {
+                // In fixed view mode: rotate torus around Z-axis like a wheel rolling
+                scene.rotation.z = torusRotationOffset;
+                scene.rotation.y = 0; // Stop Y rotation in fixed view
+                scene.position.y = 0; // No vertical movement in fixed view
+                
+                // Continuously update highlighting based on current positions
+                highlightRingAtFixedPosition();
+            }
+            
+            // Update displays
+            updateFPS(currentTime);
+            updateCameraPosition();
+            
+            renderer.render(scene, camera);
+        }
+
+        // Initialize
+        createTorus();
+        initializeBoxData();
+        
+        // Initialize session tracking
+        SessionDataManager.initializeSession();
+        
+        camera.position.set(0, 0, 25);
+        animate(0);
+    </script>
+</body>
+</html>
